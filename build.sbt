@@ -47,11 +47,15 @@ lazy val sparkDeps = Seq(
     exclude(org = "org.apache.hadoop", name = "hadoop-client")
 )
 
+lazy val generic = project.in(file("generic"))
+  .settings(scalaVersion := "3.0.0")
+
 lazy val core = (project in file("core"))
   .configs(IntegrationTest)
   .settings(
     name := "parquet4s-core",
     crossScalaVersions := supportedScalaVersions,
+    scalacOptions += "-Ytasty-reader",
     libraryDependencies ++= Seq(
       "org.apache.parquet" % "parquet-hadoop" % parquetVersion
         exclude(org = "org.slf4j", name = "slf4j-api"),
