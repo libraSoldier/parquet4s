@@ -24,7 +24,7 @@ class FilteringByListSpec extends AnyFlatSpec with Matchers with BeforeAndAfterA
                    long: Long,
                    float: Float,
                    double: Double,
-                   enum: String,
+                   `enum`: String,
                    flag: Boolean,
                    date: LocalDate,
                    sqlDate: Date,
@@ -32,7 +32,7 @@ class FilteringByListSpec extends AnyFlatSpec with Matchers with BeforeAndAfterA
                    embedded: Embedded
                  )
 
-  val enum: Seq[String] = List("a", "b", "c", "d")
+  val `enum`: Seq[String] = List("a", "b", "c", "d")
   val dataSize: Int = 4096
   val halfSize: Int = dataSize / 2
   val filePath: Path = Path(Path(Files.createTempDirectory("example")), "file.parquet")
@@ -56,7 +56,7 @@ class FilteringByListSpec extends AnyFlatSpec with Matchers with BeforeAndAfterA
         long = i.toLong,
         float = (BigDecimal("0.01") * BigDecimal(i)).toFloat,
         double = (BigDecimal("0.00000001") * BigDecimal(i)).toDouble,
-        enum = enum(Random.nextInt(enum.size)),
+        `enum` = `enum`(Random.nextInt(`enum`.size)),
         flag = Random.nextBoolean(),
         date = zeroDate.plusDays(i),
         sqlDate = Date.valueOf(zeroDate.plusDays(i)),
@@ -91,7 +91,7 @@ class FilteringByListSpec extends AnyFlatSpec with Matchers with BeforeAndAfterA
     val unfilteredRecords = ParquetReader.read[Data](filePath)
 
     try {
-      filteredRecords.map(field) should contain only (values: _*)
+      filteredRecords.map(field).toSet should contain theSameElementsAs values
       val manuallyFilteredRecords = unfilteredRecords.filter(row => values.contains(field(row)))
       filteredRecords.map(_.idx) should equal(manuallyFilteredRecords.map(_.idx))
     } finally {
@@ -115,7 +115,7 @@ class FilteringByListSpec extends AnyFlatSpec with Matchers with BeforeAndAfterA
 
   it should "filter data by a list of doubles" in genericFilterTest[Double, java.lang.Double, DoubleColumn]("double", _.double)
 
-  it should "filter data by a list of strings" in specificValueFilterTest("enum", _.enum, Vector("a", "b"))
+  it should "filter data by a list of strings" in specificValueFilterTest("enum", _.`enum`, Vector("a", "b"))
 
   it should "filter data by a list of SQL dates" in genericFilterTest("sqlDate", _.sqlDate)
 

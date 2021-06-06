@@ -19,14 +19,14 @@ class FilteringSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll wit
                    idx: Int,
                    float: Float,
                    double: Double,
-                   enum: String,
+                   `enum`: String,
                    flag: Boolean,
                    date: LocalDate,
                    decimal: BigDecimal,
                    embedded: Embedded
                  )
 
-  val enum: Seq[String] = List("a", "b", "c", "d")
+  val `enum`: Seq[String] = List("a", "b", "c", "d")
   val dataSize: Int = 4096
   val halfSize: Int = dataSize / 2
   val filePath: Path = Path(Path(Files.createTempDirectory("example")), "file.parquet")
@@ -42,7 +42,7 @@ class FilteringSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll wit
         idx = i,
         float = (BigDecimal("0.01") * BigDecimal(i)).toFloat,
         double = (BigDecimal("0.00000001") * BigDecimal(i)).toDouble,
-        enum = enum(Random.nextInt(enum.size)),
+        `enum` = `enum`(Random.nextInt(`enum`.size)),
         flag = Random.nextBoolean(),
         date = zeroDate.plusDays(i),
         decimal = BigDecimal.valueOf(0.001 * (i - halfSize)),
@@ -96,21 +96,21 @@ class FilteringSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll wit
     val boundaryValue = "c"
 
     forAll(read(Col("enum") < boundaryValue)) { dataRecord =>
-      dataRecord.enum should be < boundaryValue
+      dataRecord.`enum` should be < boundaryValue
     }
 
     forAll(read(Col("enum") <= boundaryValue)) { dataRecord =>
-      dataRecord.enum should be <= boundaryValue
+      dataRecord.`enum` should be <= boundaryValue
     }
 
-    read(Col("enum") === boundaryValue).head.enum should be(boundaryValue)
+    read(Col("enum") === boundaryValue).head.`enum` should be(boundaryValue)
 
     forAll(read(Col("enum") >= boundaryValue)) { dataRecord =>
-      dataRecord.enum should be >= boundaryValue
+      dataRecord.`enum` should be >= boundaryValue
     }
 
     forAll(read(Col("enum") > boundaryValue)) { dataRecord =>
-      dataRecord.enum should be > boundaryValue
+      dataRecord.`enum` should be > boundaryValue
     }
   }
 

@@ -5,15 +5,39 @@ import bloop.integrations.sbt.BloopDefaults
 
 lazy val twoTwelve = "2.12.14"
 lazy val twoThirteen = "2.13.6"
-lazy val supportedScalaVersions = Seq(twoTwelve, twoThirteen)
+lazy val three = "3.0.0"
+lazy val coreScalaVersions = Seq(twoTwelve, twoThirteen, three)
 lazy val fs2ScalaVersions = Seq(twoTwelve, twoThirteen)
 lazy val akkaScalaVersions = Seq(twoTwelve, twoThirteen)
 
 ThisBuild / organization := "com.github.mjakubowski84"
 ThisBuild / version := "2.0.0-SNAPSHOT"
 ThisBuild / isSnapshot := true
-ThisBuild / scalaVersion := twoThirteen
-ThisBuild / scalacOptions ++= Seq("-deprecation", "-target:jvm-1.8")
+ThisBuild / scalaVersion := three
+ThisBuild / scalacOptions ++= {
+  Seq(
+    "-encoding",
+    "UTF-8",
+    "-feature",
+    "-language:implicitConversions",
+    // disabled during the migration
+    // "-Xfatal-warnings"
+  ) ++
+    (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _)) => Seq(
+        "-unchecked"
+      )
+      case _ => 
+        println(CrossVersion.partialVersion(scalaVersion.value))
+        Seq(
+          "-deprecation",
+          "-Xfatal-warnings",
+          "-Wunused:privates,locals",
+          "-Wvalue-discard",
+          "-Xsource:3"
+        )
+    })
+}
 ThisBuild / javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-unchecked", "-deprecation", "-feature")
 ThisBuild / resolvers := Seq(
   Opts.resolver.sonatypeReleases,
@@ -47,25 +71,20 @@ lazy val sparkDeps = Seq(
     exclude(org = "org.apache.hadoop", name = "hadoop-client")
 )
 
-lazy val generic = project.in(file("generic"))
-  .settings(scalaVersion := "3.0.0")
-
 lazy val core = (project in file("core"))
   .configs(IntegrationTest)
   .settings(
     name := "parquet4s-core",
-    crossScalaVersions := supportedScalaVersions,
-    scalacOptions += "-Ytasty-reader",
+    crossScalaVersions := coreScalaVersions,
     libraryDependencies ++= Seq(
       "org.apache.parquet" % "parquet-hadoop" % parquetVersion
         exclude(org = "org.slf4j", name = "slf4j-api"),
-      "com.chuusai" %% "shapeless" % shapelessVersion,
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % Provided,
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "org.scala-lang.modules" %% "scala-collection-compat" % "2.4.4",
 
       // tests
-      "org.mockito" %% "mockito-scala-scalatest" % "1.16.37" % "test",
+//      "org.mockito" %% "mockito-scala-scalatest" % "1.16.37" % "test",
       "org.scalatest" %% "scalatest" % "3.2.9" % "test,it",
       "ch.qos.logback" % "logback-classic" % "1.2.3" % "test,it",
       "org.slf4j" % "log4j-over-slf4j" % slf4jVersion % "test,it"
@@ -74,6 +93,12 @@ lazy val core = (project in file("core"))
       scala match {
         case "2.12" => sparkDeps
         case _ => Seq.empty
+      }
+    } ++ {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => sparkDeps :+ ("com.chuusai" %% "shapeless" % shapelessVersion)
+        case Some((2, _))  => Seq("com.chuusai" %% "shapeless" % shapelessVersion)
+        case _             => Seq.empty
       }
     },
     excludeDependencies ++= Seq(
@@ -88,6 +113,7 @@ lazy val akka = (project in file("akka"))
   .configs(IntegrationTest)
   .settings(
     name := "parquet4s-akka",
+    scalaVersion := twoThirteen,
     crossScalaVersions := akkaScalaVersions,
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
@@ -111,7 +137,7 @@ lazy val fs2 = (project in file("fs2"))
       "co.fs2" %% "fs2-core" % fs2Version,
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % Provided,
       "co.fs2" %% "fs2-io" % fs2Version % "it",
-      "org.typelevel" %% "cats-effect-testing-scalatest" % "1.1.0" % "it"
+      "org.typelevel" %% "cats-effect-testing-scalatest" % "1.1.1" % "it"
     ),
     excludeDependencies ++= Seq(
       ExclusionRule("org.slf4j", "slf4j-log4j12")
@@ -125,6 +151,7 @@ lazy val fs2 = (project in file("fs2"))
 lazy val examples = (project in file("examples"))
   .settings(
     name := "parquet4s-examples",
+    scalaVersion := twoThirteen,
     crossScalaVersions := fs2ScalaVersions,
     publish / skip := true,
     publishLocal / skip := true,

@@ -126,8 +126,8 @@ object RowParquetRecord {
       private def skipFields(cursor: Cursor, fields: List[Type]): List[Type] =
         fields.flatMap {
           case groupField: GroupType if groupField.getLogicalTypeAnnotation == null =>
-            val fieldSymbol = Symbol(groupField.getName)
-            cursor.advance[fieldSymbol.type].flatMap { newCursor =>
+            val fieldName = groupField.getName
+            cursor.advance[fieldName.type].flatMap { newCursor =>
               val fields = skipFields(newCursor, groupField.getFields.asScala.toList)
               if (fields.isEmpty) None
               else Some(
@@ -137,8 +137,8 @@ object RowParquetRecord {
               )
             }
           case field =>
-            val fieldSymbol = Symbol(field.getName)
-            cursor.advance[fieldSymbol.type].map(_ => field)
+            val fieldName = field.getName
+            cursor.advance[fieldName.type].map(_ => field)
         }
     }
 
@@ -158,10 +158,7 @@ final class RowParquetRecord private (
                                        private val values: Map[String, Value],
                                        protected val fields: RowParquetRecord.Fields
                                      )
-  extends ParquetRecord[(String, Value), RowParquetRecord]
-    with immutable.Seq[(String, Value)]
-    with Product
-    with ProductCompat {
+  extends ParquetRecord[(String, Value), RowParquetRecord] with immutable.Seq[(String, Value)] {
 
   override protected[parquet4s] def add(name: String, value: Value): RowParquetRecord =
     if (fields.contains(name)) {
