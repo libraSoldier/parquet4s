@@ -201,37 +201,41 @@ object TimeValueCodecs {
 
   private def decodeLocalDateTime(value: Value, configuration: ValueCodecConfiguration): LocalDateTime =
     value match {
-      case BinaryValue(binary) =>
-        val buf = ByteBuffer.wrap(binary.getBytes).order(ByteOrder.LITTLE_ENDIAN)
-        val fixedTimeInNanos = buf.getLong
-        val julianDay = buf.getInt
-
-        val date = LocalDate.ofEpochDay(julianDay - JulianDayOfEpoch)
-
-        val fixedTimeInMillis = Math.floorDiv(fixedTimeInNanos, NanosPerMilli)
-        val nanosLeft = Math.floorMod(fixedTimeInNanos, NanosPerMilli)
-        val timeInMillis = fixedTimeInMillis + configuration.timeZone.getRawOffset
-        val timeInNanos = (timeInMillis * NanosPerMilli) + nanosLeft
-
-        if (timeInNanos >= NanosPerDay) {
-          /*
-           * original value was encoded with time zone WEST to one that we read it with
-           * and we experience a day flip due to difference in time zone offset
-           */
-          val time = LocalTime.ofNanoOfDay(timeInNanos - NanosPerDay)
-          LocalDateTime.of(date.plusDays(1), time)
-        } else if (timeInNanos < 0) {
-          /*
-           * original value was encoded with time zone EAST to one that we read it with
-           * and we experience a day flip due to difference in time zone offset
-           */
-          val time = LocalTime.ofNanoOfDay(timeInNanos + NanosPerDay)
-          LocalDateTime.of(date.minusDays(1), time)
-        } else {
-          val time = LocalTime.ofNanoOfDay(timeInNanos)
-          LocalDateTime.of(date, time)
-        }
+      case BinaryValue(binary) => transformBinaryToLocalDateTime(binary, configuration)
+      case LongValue(long) => transformBinaryToLocalDateTime(Binary.fromString(long.toBinaryString), configuration)
     }
+
+  private def transformBinaryToLocalDateTime(binary : Binary, configuration: ValueCodecConfiguration): LocalDateTime = {
+    val buf = ByteBuffer.wrap(binary.getBytes).order(ByteOrder.LITTLE_ENDIAN)
+    val fixedTimeInNanos = buf.getLong
+    val julianDay = buf.getInt
+
+    val date = LocalDate.ofEpochDay(julianDay - JulianDayOfEpoch)
+
+    val fixedTimeInMillis = Math.floorDiv(fixedTimeInNanos, NanosPerMilli)
+    val nanosLeft = Math.floorMod(fixedTimeInNanos, NanosPerMilli)
+    val timeInMillis = fixedTimeInMillis + configuration.timeZone.getRawOffset
+    val timeInNanos = (timeInMillis * NanosPerMilli) + nanosLeft
+
+    if (timeInNanos >= NanosPerDay) {
+      /*
+       * original value was encoded with time zone WEST to one that we read it with
+       * and we experience a day flip due to difference in time zone offset
+       */
+      val time = LocalTime.ofNanoOfDay(timeInNanos - NanosPerDay)
+      LocalDateTime.of(date.plusDays(1), time)
+    } else if (timeInNanos < 0) {
+      /*
+       * original value was encoded with time zone EAST to one that we read it with
+       * and we experience a day flip due to difference in time zone offset
+       */
+      val time = LocalTime.ofNanoOfDay(timeInNanos + NanosPerDay)
+      LocalDateTime.of(date.minusDays(1), time)
+    } else {
+      val time = LocalTime.ofNanoOfDay(timeInNanos)
+      LocalDateTime.of(date, time)
+    }
+  }
 
   private def encodeLocalDateTime(data: LocalDateTime, configuration: ValueCodecConfiguration): Value = BinaryValue {
     val date = data.toLocalDate
